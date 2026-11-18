@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
 	deleteTemplate,
-	listEmployees,
 	listTemplates,
 	listUpcoming,
 	saveTemplate,
@@ -39,10 +38,6 @@ function dedupeEmails(emails: string[]) {
 	}
 	return next;
 }
-
-export const getEmployees = createServerFn({ method: "GET" }).handler(
-	async () => listEmployees(),
-);
 
 export const getTemplates = createServerFn({ method: "GET" }).handler(
 	async () => listTemplates(),

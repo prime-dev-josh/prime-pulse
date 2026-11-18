@@ -284,8 +284,8 @@ export function TemplatesScreen() {
 						onClick={() => showList(kind)}
 						className={`rounded-xl border p-4 text-left shadow-sm transition-colors ${
 							form.kind === kind
-								? "border-[var(--brand-orange)] bg-white"
-								: "border-[var(--line)] bg-white/80 hover:border-[var(--brand-indigo)]/40"
+								? "border-[var(--brand-orange)] bg-card"
+								: "border-[var(--line)] bg-card/80 hover:border-[var(--brand-indigo)]/40"
 						}`}
 					>
 						<p className="text-sm font-semibold text-[var(--brand-ink)]">
@@ -299,13 +299,13 @@ export function TemplatesScreen() {
 			</section>
 
 			{notice ? (
-				<output className="block shrink-0 rounded-lg border border-[var(--brand-indigo)]/20 bg-white px-4 py-3 text-sm text-[var(--brand-indigo)]">
+				<output className="block shrink-0 rounded-lg border border-[var(--brand-indigo)]/20 bg-card px-4 py-3 text-sm text-[var(--brand-indigo)]">
 					{notice}
 				</output>
 			) : null}
 			{actionError ? (
 				<p
-					className="shrink-0 rounded-lg border border-destructive/30 bg-white px-4 py-3 text-sm text-destructive"
+					className="shrink-0 rounded-lg border border-destructive/30 bg-card px-4 py-3 text-sm text-destructive"
 					role="alert"
 				>
 					{actionError}
@@ -313,7 +313,7 @@ export function TemplatesScreen() {
 			) : null}
 
 			{panel === "list" ? (
-				<section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
+				<section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-card shadow-sm">
 					<div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-4">
 						<div>
 							<h2 className="text-lg font-semibold text-[var(--brand-ink)]">
@@ -405,7 +405,7 @@ export function TemplatesScreen() {
 				</section>
 			) : (
 				<form
-					className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm"
+					className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-card shadow-sm"
 					onSubmit={(event) => {
 						event.preventDefault();
 						if (canSave && !save.isPending) save.mutate();
@@ -428,7 +428,7 @@ export function TemplatesScreen() {
 							onChange={(event) =>
 								setForm({ ...form, name: event.target.value })
 							}
-							className="bg-white"
+							className="bg-card"
 						/>
 					</div>
 					<div className="space-y-2">
@@ -444,7 +444,7 @@ export function TemplatesScreen() {
 									sendAt: normalizeSendAt(event.target.value),
 								})
 							}
-							className="max-w-48 bg-white"
+							className="max-w-48 bg-card"
 							required
 						/>
 						<p className="text-xs text-[var(--sea-ink-soft)]">
@@ -488,7 +488,7 @@ export function TemplatesScreen() {
 										daysBeforeMonthStart: Number(event.target.value) || 0,
 									})
 								}
-								className="bg-white"
+								className="bg-card"
 							/>
 							<p className="text-xs text-[var(--sea-ink-soft)]">
 								14 means the December report goes out on November 17. 0 sends on
@@ -509,7 +509,7 @@ export function TemplatesScreen() {
 									})
 								}
 								placeholder="1, 5, 10, 15, 20, 25, 30"
-								className="bg-white"
+								className="bg-card"
 							/>
 							<p className="text-xs text-[var(--sea-ink-soft)]">
 								The CEO note sends only on these work-anniversary years.
@@ -535,7 +535,7 @@ export function TemplatesScreen() {
 									? "ceo@primeae.com"
 									: "optional extra addresses"
 							}
-							className="min-h-20 bg-white"
+							className="min-h-20 bg-card"
 						/>
 						<p className="text-xs text-[var(--sea-ink-soft)]">
 							{form.kind === "employee_day_of"
@@ -560,7 +560,7 @@ export function TemplatesScreen() {
 							onChange={(event) =>
 								setForm({ ...form, emailSubject: event.target.value })
 							}
-							className="bg-white"
+							className="bg-card"
 						/>
 					</div>
 					<div className="space-y-2">
@@ -584,11 +584,11 @@ export function TemplatesScreen() {
 							onChange={(event) =>
 								setForm({ ...form, emailBody: event.target.value })
 							}
-							className="min-h-40 bg-white"
+							className="min-h-40 bg-card"
 						/>
 					</div>
 					</div>
-					<div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-[var(--line)] bg-white px-5 py-4">
+					<div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-[var(--line)] bg-card px-5 py-4">
 					<label className="mr-auto flex items-center gap-2 text-sm">
 						<input
 							type="checkbox"

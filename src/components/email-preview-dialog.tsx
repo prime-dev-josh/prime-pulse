@@ -40,7 +40,7 @@ export function EmailPreviewDialog({
 
 	return (
 		<Dialog open={send != null} onOpenChange={onOpenChange}>
-			<DialogContent className="grid h-[min(52rem,calc(100vh-3rem))] w-[min(56rem,calc(100vw-2rem))] max-w-4xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden border-[var(--line)] bg-white p-0 sm:max-w-4xl sm:rounded-xl">
+			<DialogContent className="grid h-[min(52rem,calc(100vh-3rem))] w-[min(56rem,calc(100vw-2rem))] max-w-4xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden border-[var(--line)] bg-card p-0 sm:max-w-4xl sm:rounded-xl">
 				<DialogHeader className="shrink-0 space-y-1 border-b border-[var(--line)] px-6 py-4 pr-12 text-left">
 					<DialogTitle>Email preview</DialogTitle>
 					<DialogDescription>

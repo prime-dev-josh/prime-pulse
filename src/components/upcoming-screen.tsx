@@ -67,14 +67,14 @@ export function UpcomingScreen() {
 			heading="Upcoming"
 			title="Who would get a note from the templates that are turned on. Nothing is sent from this screen."
 		>
-			<section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
+			<section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-card shadow-sm">
 				<div className="flex shrink-0 flex-col gap-3 border-b border-[var(--line)] p-4 sm:flex-row sm:items-center">
 					<Input
 						value={search}
 						onChange={(event) => setSearch(event.target.value)}
 						placeholder="Search person, manager, or template"
 						aria-label="Search upcoming sends"
-						className="bg-white"
+						className="bg-card"
 					/>
 					<select
 						value={kind}
@@ -82,7 +82,7 @@ export function UpcomingScreen() {
 							setKind(event.target.value as (typeof filters)[number]["id"])
 						}
 						aria-label="Filter by template kind"
-						className="h-9 w-full shrink-0 rounded-md border border-input bg-white px-3 text-sm sm:w-44"
+						className="h-9 w-full shrink-0 rounded-md border border-input bg-card px-3 text-sm sm:w-44"
 					>
 						{filters.map((filter) => (
 							<option key={filter.id} value={filter.id}>
@@ -103,7 +103,7 @@ export function UpcomingScreen() {
 								"inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm font-medium",
 								view === "list"
 									? "bg-[var(--brand-indigo)] text-white"
-									: "text-[var(--brand-indigo)] hover:bg-[var(--brand-tint-25)]",
+									: "text-[var(--brand-indigo)] hover:bg-[var(--brand-tint-25)] dark:text-white",
 							)}
 						>
 							<List className="size-4" />
@@ -117,7 +117,7 @@ export function UpcomingScreen() {
 								"inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm font-medium",
 								view === "calendar"
 									? "bg-[var(--brand-indigo)] text-white"
-									: "text-[var(--brand-indigo)] hover:bg-[var(--brand-tint-25)]",
+									: "text-[var(--brand-indigo)] hover:bg-[var(--brand-tint-25)] dark:text-white",
 							)}
 						>
 							<CalendarDays className="size-4" />

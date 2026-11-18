@@ -10,7 +10,7 @@ import {
 } from "#/lib/calendar";
 import { formatDate } from "#/lib/dates";
 import { parseIso, toIso } from "#/lib/schedule";
-import type { UpcomingSend } from "#/lib/types";
+import type { MilestoneType, UpcomingSend } from "#/lib/types";
 import { MILESTONE_BADGE, MILESTONE_ORDER } from "#/lib/types";
 import { cn } from "#/lib/utils";
 
@@ -31,13 +31,28 @@ export function UpcomingCalendar({
 		month: initial.month,
 	});
 	const [selectedIso, setSelectedIso] = useState(today);
+	const [shown, setShown] = useState<Record<MilestoneType, boolean>>({
+		birthday: true,
+		anniversary: true,
+	});
 
 	const grouped = useMemo(() => groupSendsByDate(rows), [rows]);
 	const cells = useMemo(
 		() => monthCells(cursor.year, cursor.month),
 		[cursor.month, cursor.year],
 	);
-	const selectedSends = grouped.get(selectedIso) ?? [];
+	const selectedSends = (grouped.get(selectedIso) ?? [])
+		.map((send) => ({
+			...send,
+			employees: send.employees.filter(
+				(person) => shown[person.milestoneType],
+			),
+		}))
+		.filter((send) => send.employees.length > 0);
+
+	function toggleType(type: MilestoneType) {
+		setShown((current) => ({ ...current, [type]: !current[type] }));
+	}
 
 	function go(delta: number) {
 		const next = shiftMonth(cursor.year, cursor.month, delta);
@@ -92,20 +107,38 @@ export function UpcomingCalendar({
 						<ChevronRight />
 					</Button>
 				</div>
-				<ul className="ml-auto flex flex-wrap items-center gap-3 text-xs text-[var(--sea-ink-soft)]">
-					{MILESTONE_ORDER.map((type) => (
-						<li key={type} className="flex items-center gap-1.5">
-							<span
+				<div
+					role="group"
+					aria-label="Milestone type"
+					className="ml-auto flex flex-wrap items-center gap-2"
+				>
+					{MILESTONE_ORDER.map((type) => {
+						const on = shown[type];
+						return (
+							<button
+								key={type}
+								type="button"
+								aria-pressed={on}
+								onClick={() => toggleType(type)}
 								className={cn(
-									"size-2.5 rounded-full",
-									MILESTONE_BADGE[type].className,
+									"inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors",
+									on
+										? `${MILESTONE_BADGE[type].className} border-transparent`
+										: "border-[var(--line)] bg-card text-[var(--sea-ink-soft)] hover:border-[var(--brand-indigo)]/40",
 								)}
-								aria-hidden="true"
-							/>
-							{MILESTONE_BADGE[type].label}
-						</li>
-					))}
-				</ul>
+							>
+								<span
+									className={cn(
+										"size-2 rounded-full",
+										on ? "bg-white/90" : MILESTONE_BADGE[type].className,
+									)}
+									aria-hidden="true"
+								/>
+								{MILESTONE_BADGE[type].label}
+							</button>
+						);
+					})}
+				</div>
 			</div>
 			<div className="min-h-0 flex-[1.3] overflow-auto p-3">
 				<div className="grid h-full min-h-[28rem] grid-cols-7 grid-rows-[auto_repeat(6,minmax(0,1fr))] gap-1">
@@ -121,7 +154,7 @@ export function UpcomingCalendar({
 						const sends = grouped.get(cell.iso) ?? [];
 						const counts = countsByMilestone(sends);
 						const types = MILESTONE_ORDER.filter(
-							(type) => (counts[type] ?? 0) > 0,
+							(type) => shown[type] && (counts[type] ?? 0) > 0,
 						);
 						const selected = cell.iso === selectedIso;
 						const isToday = cell.iso === today;
@@ -150,10 +183,10 @@ export function UpcomingCalendar({
 								className={cn(
 									"flex min-h-0 flex-col gap-1 rounded-lg border p-1.5 text-left transition-colors",
 									cell.inMonth
-										? "bg-white"
+										? "bg-card"
 										: "bg-[var(--brand-tint-25)] text-[var(--sea-ink-soft)]",
 									selected
-										? "border-[var(--brand-orange)] bg-[#fff7f3]"
+										? "border-[var(--brand-orange)] bg-accent dark:bg-[color-mix(in_srgb,var(--brand-orange)_32%,transparent)]"
 										: "border-transparent hover:border-[var(--line)]",
 									isToday && !selected
 										? "border-[var(--brand-indigo)]"
@@ -163,7 +196,10 @@ export function UpcomingCalendar({
 								<span
 									className={cn(
 										"text-xs font-semibold",
-										isToday ? "text-[var(--brand-indigo)]" : null,
+										selected ? "dark:text-white" : null,
+										isToday && !selected
+											? "text-[var(--brand-indigo)] dark:text-[var(--brand-indigo-light)]"
+											: null,
 									)}
 								>
 									{cell.day}

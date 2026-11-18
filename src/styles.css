@@ -6,6 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+	color-scheme: light;
 	/* PRIME AE brand book: orange for the primary action, indigo for structure. */
 	--brand-orange: #f15d2a;
 	--brand-orange-dark: #ce451d;
@@ -59,11 +60,17 @@
 }
 
 .dark {
-	--sea-ink: #ffffff;
-	--sea-ink-soft: var(--brand-tint);
+	color-scheme: dark;
+	--brand-ink: #f3f1fa;
+	--brand-indigo-light: #a8b2dc;
+	--brand-tint: #5a547c;
+	--brand-tint-50: #322c64;
+	--brand-tint-25: #241e4c;
+	--sea-ink: #f3f1fa;
+	--sea-ink-soft: #a8b2dc;
 	--palm: #ffb59a;
 	--line: rgba(206, 206, 220, 0.22);
-	--bg-base: var(--brand-dark);
+	--bg-base: #1b1540;
 
 	--background: #1b1540;
 	--foreground: #ffffff;
@@ -144,7 +151,7 @@ body,
 
 body {
 	margin: 0;
-	color: var(--brand-ink);
+	color: var(--foreground);
 	font-family: var(--font-sans);
 	background-color: var(--bg-base);
 	background-image:

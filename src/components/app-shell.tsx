@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { ThemeToggle } from "#/components/theme-toggle";
 
 const links = [
 	{ to: "/", label: "Templates", exact: true },
 	{ to: "/upcoming", label: "Upcoming", exact: false },
-	{ to: "/employees", label: "Employees", exact: false },
 ] as const;
 
 export function AppShell({
@@ -32,28 +32,31 @@ export function AppShell({
 						/>
 						<p className="text-sm font-bold tracking-wide">Prime Pulse</p>
 					</div>
-					<nav
-						aria-label="Prime Pulse"
-						className="flex flex-wrap items-center gap-1"
-					>
-						{links.map((link) => (
-							<Link
-								key={link.to}
-								to={link.to}
-								activeOptions={{ exact: link.exact }}
-								activeProps={{
-									className:
-										"rounded-md bg-[var(--brand-orange)] px-3 py-1.5 text-sm font-semibold text-white no-underline",
-								}}
-								inactiveProps={{
-									className:
-										"rounded-md px-3 py-1.5 text-sm font-semibold text-white/90 no-underline hover:bg-white/12",
-								}}
-							>
-								{link.label}
-							</Link>
-						))}
-					</nav>
+					<div className="flex flex-wrap items-center gap-1">
+						<nav
+							aria-label="Prime Pulse"
+							className="flex flex-wrap items-center gap-1"
+						>
+							{links.map((link) => (
+								<Link
+									key={link.to}
+									to={link.to}
+									activeOptions={{ exact: link.exact }}
+									activeProps={{
+										className:
+											"rounded-md bg-[var(--brand-orange)] px-3 py-1.5 text-sm font-semibold text-white no-underline",
+									}}
+									inactiveProps={{
+										className:
+											"rounded-md px-3 py-1.5 text-sm font-semibold text-white/90 no-underline hover:bg-white/12",
+									}}
+								>
+									{link.label}
+								</Link>
+							))}
+						</nav>
+						<ThemeToggle />
+					</div>
 				</div>
 			</header>
 			<div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6 sm:px-6">
