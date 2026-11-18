@@ -68,4 +68,14 @@ export const deleteTemplateSchema = z.object({
 	id: z.number().int().positive(),
 });
 
+export const sendSkipSchema = z.object({
+	templateId: z.number().int().positive(),
+	associateOID: z.string().trim().min(1).max(128),
+	milestoneType: milestoneType,
+	milestoneDate: z
+		.string()
+		.trim()
+		.regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a milestone date"),
+});
+
 export type SaveTemplateInput = z.infer<typeof saveTemplateSchema>;

@@ -1,5 +1,5 @@
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Button } from "#/components/ui/button";
 import {
 	countsByMilestone,
@@ -19,22 +19,37 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export function UpcomingCalendar({
 	rows,
 	today,
+	focusIso,
+	onSelect,
 	children,
 }: {
 	rows: UpcomingSend[];
 	today: string;
+	focusIso?: string;
+	onSelect?: (iso: string) => void;
 	children: (sends: UpcomingSend[], selectedIso: string) => ReactNode;
 }) {
-	const initial = parseIso(today) ?? { year: 2026, month: 11, day: 1 };
+	const initial = parseIso(focusIso ?? today) ?? {
+		year: 2026,
+		month: 11,
+		day: 1,
+	};
 	const [cursor, setCursor] = useState({
 		year: initial.year,
 		month: initial.month,
 	});
-	const [selectedIso, setSelectedIso] = useState(today);
+	const [selectedIso, setSelectedIso] = useState(focusIso ?? today);
 	const [shown, setShown] = useState<Record<MilestoneType, boolean>>({
 		birthday: true,
 		anniversary: true,
 	});
+
+	useEffect(() => {
+		if (!focusIso) return;
+		const parsed = parseIso(focusIso);
+		if (parsed) setCursor({ year: parsed.year, month: parsed.month });
+		setSelectedIso(focusIso);
+	}, [focusIso]);
 
 	const grouped = useMemo(() => groupSendsByDate(rows), [rows]);
 	const cells = useMemo(
@@ -44,9 +59,7 @@ export function UpcomingCalendar({
 	const selectedSends = (grouped.get(selectedIso) ?? [])
 		.map((send) => ({
 			...send,
-			employees: send.employees.filter(
-				(person) => shown[person.milestoneType],
-			),
+			employees: send.employees.filter((person) => shown[person.milestoneType]),
 		}))
 		.filter((send) => send.employees.length > 0);
 
@@ -60,17 +73,18 @@ export function UpcomingCalendar({
 		const prefix = `${String(next.year).padStart(4, "0")}-${String(next.month).padStart(2, "0")}`;
 		const inMonth = rows.find((send) => send.sendDate.startsWith(prefix));
 		const todayParsed = parseIso(today);
+		let iso = toIso(next.year, next.month, 1);
 		if (
 			todayParsed &&
 			todayParsed.year === next.year &&
 			todayParsed.month === next.month
 		) {
-			setSelectedIso(today);
+			iso = today;
 		} else if (inMonth) {
-			setSelectedIso(inMonth.sendDate);
-		} else {
-			setSelectedIso(toIso(next.year, next.month, 1));
+			iso = inMonth.sendDate;
 		}
+		setSelectedIso(iso);
+		onSelect?.(iso);
 	}
 
 	function selectDay(iso: string, inMonth: boolean) {
@@ -79,6 +93,7 @@ export function UpcomingCalendar({
 			setCursor({ year: parsed.year, month: parsed.month });
 		}
 		setSelectedIso(iso);
+		onSelect?.(iso);
 	}
 
 	return (
@@ -188,9 +203,7 @@ export function UpcomingCalendar({
 									selected
 										? "border-[var(--brand-orange)] bg-accent dark:bg-[color-mix(in_srgb,var(--brand-orange)_32%,transparent)]"
 										: "border-transparent hover:border-[var(--line)]",
-									isToday && !selected
-										? "border-[var(--brand-indigo)]"
-										: null,
+									isToday && !selected ? "border-[var(--brand-indigo)]" : null,
 								)}
 							>
 								<span

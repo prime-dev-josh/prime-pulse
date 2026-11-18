@@ -1,18 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, List } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "#/components/app-shell";
 import { EmailPreviewDialog } from "#/components/email-preview-dialog";
-import { UpcomingCalendar } from "#/components/upcoming-calendar";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
+import { UpcomingCalendar } from "#/components/upcoming-calendar";
 import { formatDate, formatSendAt } from "#/lib/dates";
 import { todayIso } from "#/lib/schedule";
-import type { TemplateKind, UpcomingSend } from "#/lib/types";
-import { TEMPLATE_KIND_COPY, isCeoKind } from "#/lib/types";
+import type {
+	SkippedNote,
+	TemplateKind,
+	UpcomingPerson,
+	UpcomingSend,
+} from "#/lib/types";
+import { isCeoKind, TEMPLATE_KIND_COPY } from "#/lib/types";
 import { cn } from "#/lib/utils";
-import { getUpcoming } from "#/server/functions";
+import { getUpcoming, skipPerson, undoSkip } from "#/server/functions";
 
 const filters: Array<{
 	id: "all" | "ceo" | TemplateKind;
@@ -24,7 +29,54 @@ const filters: Array<{
 	{ id: "ceo", label: "CEO" },
 ];
 
-export function UpcomingScreen() {
+function csvCell(value: string) {
+	if (/[",\r\n]/.test(value)) return `"${value.replaceAll('"', '""')}"`;
+	return value;
+}
+
+function downloadCsv(rows: UpcomingSend[]) {
+	const header = [
+		"Send date",
+		"Time",
+		"Template",
+		"Kind",
+		"Recipient",
+		"Emails",
+		"Summary",
+	];
+	const lines = [
+		header,
+		...rows.map((send) => [
+			send.sendDate,
+			formatSendAt(send.sendAt),
+			send.templateName,
+			TEMPLATE_KIND_COPY[send.kind].label,
+			send.recipientName,
+			send.recipientEmails.join("; "),
+			send.summary,
+		]),
+	];
+	const csv = lines.map((line) => line.map(csvCell).join(",")).join("\r\n");
+	const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+	const url = URL.createObjectURL(blob);
+	const anchor = document.createElement("a");
+	anchor.href = url;
+	anchor.download = "prime-pulse-upcoming.csv";
+	anchor.click();
+	URL.revokeObjectURL(url);
+}
+
+function matchesKind(
+	kind: (typeof filters)[number]["id"],
+	sendKind: TemplateKind,
+) {
+	if (kind === "all") return true;
+	if (kind === "ceo") return isCeoKind(sendKind);
+	return sendKind === kind;
+}
+
+export function UpcomingScreen({ initialDate }: { initialDate?: string }) {
+	const queryClient = useQueryClient();
 	const upcoming = useQuery({
 		queryKey: ["upcoming"],
 		queryFn: () => getUpcoming(),
@@ -35,16 +87,17 @@ export function UpcomingScreen() {
 	const [view, setView] = useState<"list" | "calendar">("list");
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [preview, setPreview] = useState<UpcomingSend | null>(null);
-	const today = todayIso();
+	const [selectedDay, setSelectedDay] = useState(initialDate ?? todayIso());
+	const today = upcoming.data?.today ?? todayIso();
+
+	useEffect(() => {
+		if (initialDate) setSelectedDay(initialDate);
+	}, [initialDate]);
 
 	const rows = useMemo(() => {
 		const query = search.trim().toLowerCase();
-		return (upcoming.data ?? []).filter((send) => {
-			if (kind === "ceo") {
-				if (!isCeoKind(send.kind)) return false;
-			} else if (kind !== "all" && send.kind !== kind) {
-				return false;
-			}
+		return (upcoming.data?.sends ?? []).filter((send) => {
+			if (!matchesKind(kind, send.kind)) return false;
 			if (!query) return true;
 			return (
 				send.templateName.toLowerCase().includes(query) ||
@@ -57,8 +110,61 @@ export function UpcomingScreen() {
 		});
 	}, [kind, search, upcoming.data]);
 
+	const skipped = useMemo(() => {
+		const query = search.trim().toLowerCase();
+		return (upcoming.data?.skipped ?? []).filter((note) => {
+			if (!matchesKind(kind, note.kind)) return false;
+			if (view === "calendar" && note.sendDate !== selectedDay) return false;
+			if (!query) return true;
+			return (
+				note.templateName.toLowerCase().includes(query) ||
+				note.displayName.toLowerCase().includes(query)
+			);
+		});
+	}, [kind, search, selectedDay, upcoming.data, view]);
+
+	const exportRows =
+		view === "calendar"
+			? rows.filter((send) => send.sendDate === selectedDay)
+			: rows;
+
+	const skip = useMutation({
+		mutationFn: (input: {
+			templateId: number;
+			associateOID: string;
+			milestoneType: UpcomingPerson["milestoneType"];
+			milestoneDate: string;
+		}) => skipPerson({ data: input }),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["upcoming"] });
+		},
+	});
+	const restore = useMutation({
+		mutationFn: (note: SkippedNote) =>
+			undoSkip({
+				data: {
+					templateId: note.templateId,
+					associateOID: note.associateOID,
+					milestoneType: note.milestoneType,
+					milestoneDate: note.milestoneDate,
+				},
+			}),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["upcoming"] });
+		},
+	});
+
+	function skipEmployee(send: UpcomingSend, person: UpcomingPerson) {
+		skip.mutate({
+			templateId: send.templateId,
+			associateOID: person.associateOID,
+			milestoneType: person.milestoneType,
+			milestoneDate: person.date.slice(0, 10),
+		});
+	}
+
 	const emptyMessage =
-		upcoming.data?.length === 0
+		upcoming.data?.sends.length === 0 && upcoming.data.skipped.length === 0
 			? "No upcoming notes. Create and turn on a template first."
 			: "No upcoming notes match this view.";
 
@@ -102,7 +208,7 @@ export function UpcomingScreen() {
 							className={cn(
 								"inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm font-medium",
 								view === "list"
-									? "bg-[var(--brand-indigo)] text-white"
+									? "bg-[var(--brand-indigo)] text-white dark:bg-white dark:text-[var(--brand-indigo)]"
 									: "text-[var(--brand-indigo)] hover:bg-[var(--brand-tint-25)] dark:text-white",
 							)}
 						>
@@ -116,7 +222,7 @@ export function UpcomingScreen() {
 							className={cn(
 								"inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm font-medium",
 								view === "calendar"
-									? "bg-[var(--brand-indigo)] text-white"
+									? "bg-[var(--brand-indigo)] text-white dark:bg-white dark:text-[var(--brand-indigo)]"
 									: "text-[var(--brand-indigo)] hover:bg-[var(--brand-tint-25)] dark:text-white",
 							)}
 						>
@@ -124,7 +230,23 @@ export function UpcomingScreen() {
 							Calendar
 						</button>
 					</div>
+					<Button
+						type="button"
+						variant="outline"
+						className="shrink-0"
+						disabled={!upcoming.data}
+						onClick={() => downloadCsv(exportRows)}
+					>
+						Download
+					</Button>
 				</div>
+				{skip.isError || restore.isError ? (
+					<p className="px-4 pt-3 text-sm text-destructive" role="alert">
+						{(skip.error ?? restore.error) instanceof Error
+							? (skip.error ?? restore.error)?.message
+							: "Could not update the skip"}
+					</p>
+				) : null}
 				{upcoming.isPending ? (
 					<p className="p-6 text-sm text-[var(--sea-ink-soft)]">
 						Building the upcoming list from ADP and your templates…
@@ -145,21 +267,34 @@ export function UpcomingScreen() {
 				{upcoming.data && view === "list" ? (
 					<SendTable
 						rows={rows}
+						skipped={skipped}
 						empty={emptyMessage}
 						openId={openId}
 						onTogglePeople={(id) => setOpenId(openId === id ? null : id)}
 						onPreview={setPreview}
+						onSkip={skipEmployee}
+						onUndo={(note) => restore.mutate(note)}
+						busy={skip.isPending || restore.isPending}
 					/>
 				) : null}
 				{upcoming.data && view === "calendar" ? (
-					<UpcomingCalendar rows={rows} today={today}>
+					<UpcomingCalendar
+						rows={rows}
+						today={today}
+						focusIso={initialDate}
+						onSelect={setSelectedDay}
+					>
 						{(sends) => (
 							<SendTable
 								rows={sends}
+								skipped={skipped}
 								empty="No notes on this day."
 								openId={openId}
 								onTogglePeople={(id) => setOpenId(openId === id ? null : id)}
 								onPreview={setPreview}
+								onSkip={skipEmployee}
+								onUndo={(note) => restore.mutate(note)}
+								busy={skip.isPending || restore.isPending}
 							/>
 						)}
 					</UpcomingCalendar>
@@ -177,16 +312,24 @@ export function UpcomingScreen() {
 
 function SendTable({
 	rows,
+	skipped,
 	empty,
 	openId,
 	onTogglePeople,
 	onPreview,
+	onSkip,
+	onUndo,
+	busy,
 }: {
 	rows: UpcomingSend[];
+	skipped: SkippedNote[];
 	empty: string;
 	openId: string | null;
 	onTogglePeople: (id: string) => void;
 	onPreview: (send: UpcomingSend) => void;
+	onSkip: (send: UpcomingSend, person: UpcomingPerson) => void;
+	onUndo: (note: SkippedNote) => void;
+	busy: boolean;
 }) {
 	return (
 		<div className="min-h-0 flex-1 overflow-auto">
@@ -202,12 +345,9 @@ function SendTable({
 					</tr>
 				</thead>
 				<tbody>
-					{rows.length === 0 ? (
+					{rows.length === 0 && skipped.length === 0 ? (
 						<tr>
-							<td
-								colSpan={5}
-								className="px-4 py-8 text-[var(--sea-ink-soft)]"
-							>
+							<td colSpan={5} className="px-4 py-8 text-[var(--sea-ink-soft)]">
 								{empty}
 							</td>
 						</tr>
@@ -255,17 +395,40 @@ function SendTable({
 										<Button size="sm" onClick={() => onPreview(send)}>
 											Preview
 										</Button>
+										{send.employees.length === 1 ? (
+											<Button
+												size="sm"
+												variant="outline"
+												disabled={busy}
+												onClick={() => onSkip(send, send.employees[0])}
+											>
+												Skip
+											</Button>
+										) : null}
 									</div>
 									{openId === send.id ? (
-										<ul className="mt-3 space-y-1 text-xs text-[var(--sea-ink-soft)]">
+										<ul className="mt-3 space-y-2 text-xs text-[var(--sea-ink-soft)]">
 											{send.employees.map((person) => (
 												<li
 													key={`${person.associateOID}-${person.milestoneType}`}
+													className="flex items-center justify-end gap-2"
 												>
-													{person.displayName} · {person.milestoneType}
-													{person.years != null
-														? ` · ${person.years} yr`
-														: ""}
+													<span>
+														{person.displayName} · {person.milestoneType}
+														{person.years != null
+															? ` · ${person.years} yr`
+															: ""}
+													</span>
+													{send.employees.length > 1 ? (
+														<Button
+															size="sm"
+															variant="outline"
+															disabled={busy}
+															onClick={() => onSkip(send, person)}
+														>
+															Skip
+														</Button>
+													) : null}
 												</li>
 											))}
 										</ul>
@@ -274,6 +437,32 @@ function SendTable({
 							</tr>
 						))
 					)}
+					{skipped.map((note) => (
+						<tr
+							key={`skip-${note.templateId}-${note.associateOID}-${note.milestoneType}-${note.milestoneDate}`}
+							className="border-t border-[var(--line)] align-top text-[var(--sea-ink-soft)]"
+						>
+							<td className="px-4 py-3">
+								<div>{formatDate(note.sendDate)}</div>
+								<div className="text-xs">{formatSendAt(note.sendAt)} ET</div>
+							</td>
+							<td className="px-3 py-3">{note.templateName}</td>
+							<td className="px-3 py-3">Skipped</td>
+							<td className="px-3 py-3">
+								{note.displayName} · {note.milestoneType}
+							</td>
+							<td className="px-4 py-3 text-right">
+								<Button
+									size="sm"
+									variant="outline"
+									disabled={busy}
+									onClick={() => onUndo(note)}
+								>
+									Undo
+								</Button>
+							</td>
+						</tr>
+					))}
 				</tbody>
 			</table>
 		</div>

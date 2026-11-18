@@ -60,6 +60,34 @@ export type UpcomingSend = {
 	employees: UpcomingPerson[];
 };
 
+export type SkippedNote = {
+	templateId: number;
+	templateName: string;
+	kind: TemplateKind;
+	associateOID: string;
+	displayName: string;
+	milestoneType: MilestoneType;
+	milestoneDate: string;
+	sendDate: string;
+	sendAt: string;
+};
+
+export type ReadinessGroup = {
+	id: "missing-email" | "missing-manager" | "missing-date";
+	title: string;
+	detail: string;
+	count: number;
+	names: string[];
+};
+
+export type UpcomingBoard = {
+	sends: UpcomingSend[];
+	skipped: SkippedNote[];
+	readiness: ReadinessGroup[];
+	templatesOn: number;
+	today: string;
+};
+
 export const DEFAULT_ANNIVERSARY_YEARS = [1, 5, 10, 15, 20, 25, 30];
 export const DEFAULT_SEND_AT = "09:00";
 

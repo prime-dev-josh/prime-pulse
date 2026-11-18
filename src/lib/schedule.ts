@@ -2,10 +2,20 @@ import type {
 	EmailTemplate,
 	EmployeeRow,
 	MilestoneType,
+	SkippedNote,
 	TemplateKind,
 	UpcomingPerson,
 	UpcomingSend,
 } from "#/lib/types";
+
+export const UNASSIGNED_MANAGER = "No manager in ADP";
+
+export type SendSkipRef = {
+	templateId: number;
+	associateOID: string;
+	milestoneType: MilestoneType;
+	milestoneDate: string;
+};
 
 export const COMPANY_ZONE = "America/New_York";
 
@@ -360,8 +370,7 @@ function managerMonthSends(
 		grouped.set(key, current);
 		names.set(
 			key,
-			employee.managerName ??
-				(key === "unassigned" ? "No manager in ADP" : key),
+			employee.managerName ?? (key === "unassigned" ? UNASSIGNED_MANAGER : key),
 		);
 		emails.set(key, employee.managerEmail);
 	}
@@ -490,4 +499,99 @@ function ceoSends(
 		}
 	}
 	return sends;
+}
+
+function skipIdentity(templateId: number, person: UpcomingPerson) {
+	return `${templateId}|${person.associateOID}|${person.milestoneType}|${person.date.slice(0, 10)}`;
+}
+
+function refreshMonthlySend(
+	send: UpcomingSend,
+	people: UpcomingPerson[],
+	template: EmailTemplate | undefined,
+	formatDate: (iso: string) => string,
+): UpcomingSend {
+	const month = /^\d+ milestones? in (.+)$/.exec(send.summary)?.[1];
+	const summary = month
+		? `${people.length} milestone${people.length === 1 ? "" : "s"} in ${month}`
+		: send.summary;
+	if (!template || !month) {
+		return { ...send, employees: people, summary };
+	}
+	const values =
+		template.kind === "manager_monthly"
+			? {
+					managerName: send.recipientName,
+					month,
+					count: people.length,
+					employeeList: employeeListText(people, formatDate),
+				}
+			: {
+					month,
+					count: people.length,
+					employeeList: employeeListText(people, formatDate),
+				};
+	return {
+		...send,
+		employees: people,
+		summary,
+		...rendered(template, values),
+	};
+}
+
+export function applySendSkips(
+	sends: UpcomingSend[],
+	skips: SendSkipRef[],
+	templates: EmailTemplate[],
+	formatDate: (iso: string) => string,
+): { sends: UpcomingSend[]; skipped: SkippedNote[] } {
+	const skippedKeys = new Set(
+		skips.map(
+			(skip) =>
+				`${skip.templateId}|${skip.associateOID}|${skip.milestoneType}|${skip.milestoneDate.slice(0, 10)}`,
+		),
+	);
+	const templatesById = new Map(
+		templates.map((template) => [template.id, template] as const),
+	);
+	const skipped: SkippedNote[] = [];
+	const next: UpcomingSend[] = [];
+	for (const send of sends) {
+		const kept: UpcomingPerson[] = [];
+		for (const person of send.employees) {
+			if (!skippedKeys.has(skipIdentity(send.templateId, person))) {
+				kept.push(person);
+				continue;
+			}
+			skipped.push({
+				templateId: send.templateId,
+				templateName: send.templateName,
+				kind: send.kind,
+				associateOID: person.associateOID,
+				displayName: person.displayName,
+				milestoneType: person.milestoneType,
+				milestoneDate: person.date.slice(0, 10),
+				sendDate: send.sendDate,
+				sendAt: send.sendAt,
+			});
+		}
+		if (kept.length === send.employees.length) {
+			next.push(send);
+			continue;
+		}
+		if (!kept.length) continue;
+		const monthly =
+			send.kind === "manager_monthly" || send.kind === "ceo_monthly";
+		next.push(
+			monthly
+				? refreshMonthlySend(
+						send,
+						kept,
+						templatesById.get(send.templateId),
+						formatDate,
+					)
+				: { ...send, employees: kept },
+		);
+	}
+	return { sends: next, skipped };
 }

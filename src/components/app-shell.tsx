@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { ThemeToggle } from "#/components/theme-toggle";
 
 const links = [
-	{ to: "/", label: "Templates", exact: true },
+	{ to: "/", label: "Pulse", exact: true },
+	{ to: "/templates", label: "Templates", exact: true },
 	{ to: "/upcoming", label: "Upcoming", exact: false },
 ] as const;
 

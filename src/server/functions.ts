@@ -1,11 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
+	addSkip,
 	deleteTemplate,
 	listTemplates,
 	listUpcoming,
+	removeSkip,
 	saveTemplate,
 } from "#/server/primepulse";
-import { deleteTemplateSchema, saveTemplateSchema } from "#/server/schemas";
+import {
+	deleteTemplateSchema,
+	saveTemplateSchema,
+	sendSkipSchema,
+} from "#/server/schemas";
 
 function parseInput<T>(
 	schema: {
@@ -61,5 +67,19 @@ export const removeEmailTemplate = createServerFn({ method: "POST" })
 	.validator((input: unknown) => parseInput(deleteTemplateSchema, input))
 	.handler(async ({ data }) => {
 		await deleteTemplate(data.id);
+		return { ok: true };
+	});
+
+export const skipPerson = createServerFn({ method: "POST" })
+	.validator((input: unknown) => parseInput(sendSkipSchema, input))
+	.handler(async ({ data }) => {
+		await addSkip(data);
+		return { ok: true };
+	});
+
+export const undoSkip = createServerFn({ method: "POST" })
+	.validator((input: unknown) => parseInput(sendSkipSchema, input))
+	.handler(async ({ data }) => {
+		await removeSkip(data);
 		return { ok: true };
 	});

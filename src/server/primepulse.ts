@@ -1,12 +1,18 @@
 import { formatDate, normalizeSendAt } from "#/lib/dates";
-import { todayIso, upcomingSends } from "#/lib/schedule";
+import { readinessReport } from "#/lib/pulse";
+import {
+	applySendSkips,
+	type SendSkipRef,
+	todayIso,
+	upcomingSends,
+} from "#/lib/schedule";
 import type {
 	AnniversarySource,
 	EmailTemplate,
 	EmployeeRow,
 	MilestoneType,
 	TemplateKind,
-	UpcomingSend,
+	UpcomingBoard,
 } from "#/lib/types";
 import { DEFAULT_ANNIVERSARY_YEARS } from "#/lib/types";
 import { sql, sqlPool } from "#/server/azureSql";
@@ -159,6 +165,16 @@ ALTER TABLE [primepulse].[EmailTemplate] DROP CONSTRAINT CK_primepulse_EmailTemp
 ALTER TABLE [primepulse].[EmailTemplate] DROP CONSTRAINT CK_primepulse_EmailTemplate_kind;`,
 		`ALTER TABLE [primepulse].[EmailTemplate] ALTER COLUMN kind nvarchar(32) NOT NULL;`,
 		`ALTER TABLE [primepulse].[EmailTemplate] WITH NOCHECK ADD CONSTRAINT CK_primepulse_EmailTemplate_kind CHECK (kind IN (N'employee_day_of', N'manager_monthly', N'ceo_anniversary', N'ceo_monthly'));`,
+		`IF OBJECT_ID(N'primepulse.SendSkip', N'U') IS NULL
+CREATE TABLE [primepulse].[SendSkip] (
+	templateId int NOT NULL,
+	associateOID nvarchar(128) NOT NULL,
+	milestoneType nvarchar(32) NOT NULL,
+	milestoneDate nvarchar(10) NOT NULL,
+	createdAt datetime2 NOT NULL CONSTRAINT DF_primepulse_SendSkip_created DEFAULT SYSUTCDATETIME(),
+	CONSTRAINT PK_primepulse_SendSkip PRIMARY KEY (templateId, associateOID, milestoneType, milestoneDate),
+	CONSTRAINT CK_primepulse_SendSkip_type CHECK (milestoneType IN (N'birthday', N'anniversary'))
+);`,
 	];
 	try {
 		for (const batch of batches) {
@@ -168,7 +184,7 @@ ALTER TABLE [primepulse].[EmailTemplate] DROP CONSTRAINT CK_primepulse_EmailTemp
 		const message =
 			error instanceof Error ? error.message : "Unknown SQL error";
 		throw new Error(
-			`Could not prepare primepulse.EmailTemplate. The signed-in Azure identity needs permission to change the primepulse schema in atg-requirements. ${message}`,
+			`Could not prepare the primepulse schema. The signed-in Azure identity needs permission to change primepulse in atg-requirements. ${message}`,
 		);
 	}
 }
@@ -466,6 +482,7 @@ export async function deleteTemplate(id: number) {
 	const request = pool.request();
 	request.input("id", sql.Int, id);
 	const result = await request.query(`
+		DELETE FROM [primepulse].[SendSkip] WHERE templateId = @id;
 		DELETE FROM [primepulse].[EmailTemplate] WHERE id = @id;
 		SELECT @@ROWCOUNT AS deleted;
 	`);
@@ -474,12 +491,95 @@ export async function deleteTemplate(id: number) {
 	}
 }
 
-export async function listUpcoming(): Promise<UpcomingSend[]> {
+async function listSkips(): Promise<SendSkipRef[]> {
+	const pool = await sqlPool();
+	await ensurePrimepulse(pool);
+	const result = await pool.request().query(`
+		SELECT templateId, associateOID, milestoneType, milestoneDate
+		FROM [primepulse].[SendSkip]
+	`);
+	return (result.recordset ?? []).flatMap((row: Record<string, unknown>) => {
+		const milestoneType = String(row.milestoneType ?? "");
+		if (milestoneType !== "birthday" && milestoneType !== "anniversary") {
+			return [];
+		}
+		return [
+			{
+				templateId: Number(row.templateId),
+				associateOID: String(row.associateOID ?? ""),
+				milestoneType,
+				milestoneDate: String(row.milestoneDate ?? "").slice(0, 10),
+			},
+		];
+	});
+}
+
+export async function addSkip(input: SendSkipRef) {
+	const pool = await sqlPool();
+	await ensurePrimepulse(pool);
+	const request = pool.request();
+	request.input("templateId", sql.Int, input.templateId);
+	request.input("associateOID", sql.NVarChar(128), input.associateOID);
+	request.input("milestoneType", sql.NVarChar(32), input.milestoneType);
+	request.input(
+		"milestoneDate",
+		sql.NVarChar(10),
+		input.milestoneDate.slice(0, 10),
+	);
+	try {
+		await request.query(`
+			INSERT INTO [primepulse].[SendSkip]
+				(templateId, associateOID, milestoneType, milestoneDate)
+			VALUES (@templateId, @associateOID, @milestoneType, @milestoneDate)
+		`);
+	} catch (error) {
+		if (sqlNumber(error) === 2627 || sqlNumber(error) === 2601) return;
+		throw error;
+	}
+}
+
+export async function removeSkip(input: SendSkipRef) {
+	const pool = await sqlPool();
+	await ensurePrimepulse(pool);
+	const request = pool.request();
+	request.input("templateId", sql.Int, input.templateId);
+	request.input("associateOID", sql.NVarChar(128), input.associateOID);
+	request.input("milestoneType", sql.NVarChar(32), input.milestoneType);
+	request.input(
+		"milestoneDate",
+		sql.NVarChar(10),
+		input.milestoneDate.slice(0, 10),
+	);
+	await request.query(`
+		DELETE FROM [primepulse].[SendSkip]
+		WHERE templateId = @templateId
+			AND associateOID = @associateOID
+			AND milestoneType = @milestoneType
+			AND milestoneDate = @milestoneDate
+	`);
+}
+
+export async function listUpcoming(): Promise<UpcomingBoard> {
 	const [templates, employees] = await Promise.all([
 		listTemplates(),
 		listEmployees(),
 	]);
-	return upcomingSends(templates, employees, todayIso(), formatDate);
+	const today = todayIso();
+	const built = upcomingSends(templates, employees, today, formatDate);
+	const skips = await listSkips();
+	const { sends, skipped } = applySendSkips(
+		built,
+		skips,
+		templates,
+		formatDate,
+	);
+	return {
+		sends,
+		skipped,
+		readiness: readinessReport(templates, employees, built),
+		templatesOn: templates.filter((template) => template.enabled).length,
+		today,
+	};
 }
 
 function sqlNumber(error: unknown) {
