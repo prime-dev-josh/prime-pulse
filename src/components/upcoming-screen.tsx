@@ -16,6 +16,7 @@ import type {
 	UpcomingSend,
 } from "#/lib/types";
 import { isCeoKind, TEMPLATE_KIND_COPY } from "#/lib/types";
+import { actionErrorMessage, toastAction, toastError } from "#/lib/toast";
 import { cn } from "#/lib/utils";
 import { getUpcoming, skipPerson, undoSkip } from "#/server/functions";
 
@@ -134,9 +135,22 @@ export function UpcomingScreen({ initialDate }: { initialDate?: string }) {
 			associateOID: string;
 			milestoneType: UpcomingPerson["milestoneType"];
 			milestoneDate: string;
-		}) => skipPerson({ data: input }),
-		onSuccess: async () => {
+			displayName: string;
+		}) =>
+			skipPerson({
+				data: {
+					templateId: input.templateId,
+					associateOID: input.associateOID,
+					milestoneType: input.milestoneType,
+					milestoneDate: input.milestoneDate,
+				},
+			}),
+		onSuccess: async (_, { displayName }) => {
+			toastAction(`Skipped ${displayName} for this send.`);
 			await queryClient.invalidateQueries({ queryKey: ["upcoming"] });
+		},
+		onError: (error) => {
+			toastError(actionErrorMessage(error, "Could not skip this person"));
 		},
 	});
 	const restore = useMutation({
@@ -149,8 +163,12 @@ export function UpcomingScreen({ initialDate }: { initialDate?: string }) {
 					milestoneDate: note.milestoneDate,
 				},
 			}),
-		onSuccess: async () => {
+		onSuccess: async (_, note) => {
+			toastAction(`Restored ${note.displayName} to upcoming.`);
 			await queryClient.invalidateQueries({ queryKey: ["upcoming"] });
+		},
+		onError: (error) => {
+			toastError(actionErrorMessage(error, "Could not restore this person"));
 		},
 	});
 
@@ -160,6 +178,7 @@ export function UpcomingScreen({ initialDate }: { initialDate?: string }) {
 			associateOID: person.associateOID,
 			milestoneType: person.milestoneType,
 			milestoneDate: person.date.slice(0, 10),
+			displayName: person.displayName,
 		});
 	}
 
@@ -235,18 +254,18 @@ export function UpcomingScreen({ initialDate }: { initialDate?: string }) {
 						variant="outline"
 						className="shrink-0"
 						disabled={!upcoming.data}
-						onClick={() => downloadCsv(exportRows)}
+						onClick={() => {
+							downloadCsv(exportRows);
+							toastAction(
+								exportRows.length
+									? `Downloaded ${exportRows.length} row${exportRows.length === 1 ? "" : "s"}.`
+									: "Nothing to download for this view.",
+							);
+						}}
 					>
 						Download
 					</Button>
 				</div>
-				{skip.isError || restore.isError ? (
-					<p className="px-4 pt-3 text-sm text-destructive" role="alert">
-						{(skip.error ?? restore.error) instanceof Error
-							? (skip.error ?? restore.error)?.message
-							: "Could not update the skip"}
-					</p>
-				) : null}
 				{upcoming.isPending ? (
 					<p className="p-6 text-sm text-[var(--sea-ink-soft)]">
 						Building the upcoming list from ADP and your templates…

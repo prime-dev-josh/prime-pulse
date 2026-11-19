@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { AppShell } from "#/components/app-shell";
-import { Badge } from "#/components/ui/badge";
+import { badgeVariants } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
@@ -33,6 +33,8 @@ import {
 	removeEmailTemplate,
 	saveEmailTemplate,
 } from "#/server/functions";
+import { actionErrorMessage, toastAction, toastError } from "#/lib/toast";
+import { cn } from "#/lib/utils";
 
 type FormState = {
 	id?: number;
@@ -162,6 +164,26 @@ function nextSendLine(
 	return `Next ${formatDate(next.sendDate)} at ${formatSendAt(next.sendAt)} ET · ${count}`;
 }
 
+function templatePayload(template: EmailTemplate, enabled: boolean) {
+	return {
+		id: template.id,
+		name: template.name,
+		kind: template.kind,
+		milestoneTypes:
+			template.kind === "ceo_anniversary"
+				? (["anniversary"] as const)
+				: template.milestoneTypes,
+		daysBeforeMonthStart: template.daysBeforeMonthStart,
+		anniversaryYears:
+			template.kind === "ceo_anniversary" ? template.anniversaryYears : [],
+		recipientEmails: template.recipientEmails,
+		sendAt: normalizeSendAt(template.sendAt),
+		emailSubject: template.emailSubject,
+		emailBody: template.emailBody,
+		enabled,
+	};
+}
+
 export function TemplatesScreen() {
 	const queryClient = useQueryClient();
 	const templates = useQuery({
@@ -176,9 +198,6 @@ export function TemplatesScreen() {
 	});
 	const [form, setForm] = useState<FormState>(emptyForm());
 	const [panel, setPanel] = useState<"list" | "form">("list");
-	const [notice, setNotice] = useState<string | null>(null);
-	const [actionError, setActionError] = useState<string | null>(null);
-
 	const { emails, invalid } = parseNotifyList(form.recipientText);
 	const years = parseYears(form.anniversaryYearsText);
 	const canSave =
@@ -231,24 +250,48 @@ export function TemplatesScreen() {
 				},
 			}),
 		onSuccess: async () => {
-			setNotice(form.id == null ? "Template saved." : "Template updated.");
-			setActionError(null);
+			toastAction(
+				form.id == null ? "Template saved." : "Template updated.",
+			);
 			setForm(emptyForm(form.kind));
 			setPanel("list");
 			await refresh();
 		},
 		onError: (error) => {
-			setActionError(
-				error instanceof Error ? error.message : "Could not save the template",
+			toastError(actionErrorMessage(error, "Could not save the template"));
+		},
+	});
+
+	const toggleEnabled = useMutation({
+		mutationFn: ({
+			template,
+			enabled,
+		}: {
+			template: EmailTemplate;
+			enabled: boolean;
+		}) => saveEmailTemplate({ data: templatePayload(template, enabled) }),
+		onSuccess: async (_, { template, enabled }) => {
+			toastAction(
+				enabled
+					? `${template.name} is ready to use.`
+					: `${template.name} is paused.`,
 			);
+			if (form.id === template.id) {
+				setForm((current) => ({ ...current, enabled }));
+			}
+			await refresh();
+		},
+		onError: (error) => {
+			toastError(actionErrorMessage(error, "Could not update this template"));
 		},
 	});
 
 	const remove = useMutation({
 		mutationFn: (id: number) => removeEmailTemplate({ data: { id } }),
 		onSuccess: async (_, id) => {
-			setNotice("Template removed.");
-			setActionError(null);
+			const name =
+				templates.data?.find((item) => item.id === id)?.name ?? "Template";
+			toastAction(`${name} removed.`);
 			if (form.id === id) {
 				setForm(emptyForm(form.kind));
 				setPanel("list");
@@ -256,24 +299,18 @@ export function TemplatesScreen() {
 			await refresh();
 		},
 		onError: (error) => {
-			setActionError(
-				error instanceof Error
-					? error.message
-					: "Could not remove the template",
-			);
+			toastError(actionErrorMessage(error, "Could not remove the template"));
 		},
 	});
 
 	function showList(kind: TemplateKind = form.kind) {
 		setForm(emptyForm(kind));
 		setPanel("list");
-		setActionError(null);
 	}
 
 	function startNew() {
 		setForm(emptyForm(form.kind));
 		setPanel("form");
-		setActionError(null);
 	}
 
 	function duplicate(template: EmailTemplate) {
@@ -291,8 +328,6 @@ export function TemplatesScreen() {
 			enabled: template.enabled,
 		});
 		setPanel("form");
-		setNotice(null);
-		setActionError(null);
 	}
 
 	function edit(template: EmailTemplate) {
@@ -310,7 +345,6 @@ export function TemplatesScreen() {
 			enabled: template.enabled,
 		});
 		setPanel("form");
-		setActionError(null);
 	}
 
 	function toggleType(type: MilestoneType) {
@@ -358,20 +392,6 @@ export function TemplatesScreen() {
 						</button>
 					))}
 				</section>
-
-				{notice ? (
-					<output className="block shrink-0 rounded-lg border border-[var(--brand-indigo)]/20 bg-card px-4 py-3 text-sm text-[var(--brand-indigo)]">
-						{notice}
-					</output>
-				) : null}
-				{actionError ? (
-					<p
-						className="shrink-0 rounded-lg border border-destructive/30 bg-card px-4 py-3 text-sm text-destructive"
-						role="alert"
-					>
-						{actionError}
-					</p>
-				) : null}
 
 				{panel === "list" ? (
 					<section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-card shadow-sm">
@@ -437,9 +457,34 @@ export function TemplatesScreen() {
 														{nextSendLine(template, upcoming.data?.sends)}
 													</p>
 												</div>
-												<Badge variant={template.enabled ? "saved" : "outline"}>
-													{template.enabled ? "On" : "Paused"}
-												</Badge>
+												<button
+													type="button"
+													aria-pressed={template.enabled}
+													aria-label={
+														template.enabled
+															? `Pause ${template.name}`
+															: `Turn on ${template.name}`
+													}
+													disabled={
+														toggleEnabled.isPending &&
+														toggleEnabled.variables?.template.id ===
+															template.id
+													}
+													onClick={() =>
+														toggleEnabled.mutate({
+															template,
+															enabled: !template.enabled,
+														})
+													}
+													className={cn(
+														badgeVariants({
+															variant: template.enabled ? "saved" : "outline",
+														}),
+														"cursor-pointer dark:hover:opacity-90",
+													)}
+												>
+													{template.enabled ? "Ready to use" : "Paused"}
+												</button>
 											</div>
 											<div className="mt-4 flex items-center justify-between gap-3">
 												<p className="text-xs text-[var(--sea-ink-soft)]">

@@ -64,12 +64,12 @@ export function PulseScreen() {
 							/>
 							<Link
 								to="/templates"
-								className="rounded-xl border border-[var(--line)] bg-card p-4 text-[var(--brand-ink)] no-underline shadow-sm hover:border-[var(--brand-orange)]"
+								className="rounded-xl border border-[var(--line)] bg-card p-4 text-[var(--brand-ink)] no-underline shadow-sm hover:border-[var(--brand-orange)] dark:border-white dark:hover:border-[var(--brand-orange)]"
 							>
 								<p className="text-xs font-semibold uppercase tracking-wide text-[var(--brand-indigo-light)] dark:text-[var(--brand-orange)]">
 									Templates on
 								</p>
-								<p className="mt-2 text-3xl font-semibold tabular-nums">
+								<p className="mt-2 text-3xl font-semibold tabular-nums dark:!text-white">
 									{board.templatesOn}
 								</p>
 								<p className="mt-1 text-xs text-[var(--sea-ink-soft)]">
