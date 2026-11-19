@@ -1,6 +1,14 @@
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Button } from "#/components/ui/button";
+import {
+	Button,
+	makeStyles,
+	tokens,
+} from "@fluentui/react-components";
+import {
+	CalendarLtr24Regular,
+	ChevronLeft24Regular,
+	ChevronRight24Regular,
+} from "@fluentui/react-icons";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
 	countsByMilestone,
 	groupSendsByDate,
@@ -12,9 +20,139 @@ import { formatDate } from "#/lib/dates";
 import { parseIso, toIso } from "#/lib/schedule";
 import type { MilestoneType, UpcomingSend } from "#/lib/types";
 import { MILESTONE_BADGE, MILESTONE_ORDER } from "#/lib/types";
-import { cn } from "#/lib/utils";
+import { useTheme } from "#/theme/useTheme";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const useStyles = makeStyles({
+	root: {
+		display: "flex",
+		flex: 1,
+		flexDirection: "column",
+		minHeight: 0,
+		overflow: "hidden",
+	},
+	toolbar: {
+		display: "flex",
+		flexWrap: "wrap",
+		alignItems: "center",
+		gap: "12px",
+		padding: "12px 16px",
+		borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+	},
+	monthNav: {
+		display: "flex",
+		alignItems: "center",
+		gap: "4px",
+	},
+	monthTitle: {
+		minWidth: "11rem",
+		margin: 0,
+		textAlign: "center",
+		fontWeight: tokens.fontWeightSemibold,
+	},
+	filters: {
+		display: "flex",
+		flexWrap: "wrap",
+		gap: "8px",
+		marginLeft: "auto",
+	},
+	filter: {
+		display: "inline-flex",
+		alignItems: "center",
+		gap: "6px",
+		borderRadius: tokens.borderRadiusCircular,
+		border: `1px solid ${tokens.colorNeutralStroke2}`,
+		padding: "4px 10px",
+		fontSize: tokens.fontSizeBase200,
+		fontWeight: tokens.fontWeightSemibold,
+		background: tokens.colorNeutralBackground1,
+		color: tokens.colorNeutralForeground3,
+		cursor: "pointer",
+	},
+	dot: {
+		width: "8px",
+		height: "8px",
+		borderRadius: tokens.borderRadiusCircular,
+	},
+	gridWrap: {
+		flex: 1.3,
+		minHeight: 0,
+		overflow: "auto",
+		padding: "12px",
+	},
+	grid: {
+		display: "grid",
+		height: "100%",
+		minHeight: "28rem",
+		gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+		gridTemplateRows: "auto repeat(6, minmax(0, 1fr))",
+		gap: "4px",
+	},
+	weekday: {
+		margin: 0,
+		paddingBottom: "4px",
+		textAlign: "center",
+		fontSize: "11px",
+		fontWeight: tokens.fontWeightSemibold,
+		letterSpacing: "0.04em",
+		textTransform: "uppercase",
+		color: tokens.colorNeutralForeground3,
+	},
+	day: {
+		display: "flex",
+		minHeight: 0,
+		flexDirection: "column",
+		gap: "4px",
+		borderRadius: tokens.borderRadiusMedium,
+		border: "1px solid transparent",
+		padding: "6px",
+		textAlign: "left",
+		cursor: "pointer",
+		background: tokens.colorNeutralBackground1,
+		color: tokens.colorNeutralForeground1,
+	},
+	dayNumber: {
+		fontSize: tokens.fontSizeBase200,
+		fontWeight: tokens.fontWeightSemibold,
+	},
+	badges: {
+		display: "flex",
+		flexWrap: "wrap",
+		gap: "2px",
+		marginTop: "auto",
+	},
+	count: {
+		display: "inline-flex",
+		minWidth: "20px",
+		alignItems: "center",
+		justifyContent: "center",
+		borderRadius: tokens.borderRadiusCircular,
+		padding: "0 6px",
+		fontSize: "10px",
+		fontWeight: tokens.fontWeightBold,
+		lineHeight: "16px",
+	},
+	detail: {
+		display: "flex",
+		flex: 1,
+		flexDirection: "column",
+		minHeight: 0,
+		overflow: "hidden",
+		borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+	},
+	detailHead: {
+		display: "flex",
+		alignItems: "center",
+		gap: "8px",
+		padding: "8px 16px",
+	},
+	detailScroll: {
+		flex: 1,
+		minHeight: 0,
+		overflow: "auto",
+	},
+});
 
 export function UpcomingCalendar({
 	rows,
@@ -29,6 +167,8 @@ export function UpcomingCalendar({
 	onSelect?: (iso: string) => void;
 	children: (sends: UpcomingSend[], selectedIso: string) => ReactNode;
 }) {
+	const styles = useStyles();
+	const { theme } = useTheme();
 	const initial = parseIso(focusIso ?? today) ?? {
 		year: 2026,
 		month: 11,
@@ -97,71 +237,63 @@ export function UpcomingCalendar({
 	}
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-[var(--line)] px-4 py-3">
-				<div className="flex items-center gap-1">
+		<div className={styles.root}>
+			<div className={styles.toolbar}>
+				<div className={styles.monthNav}>
 					<Button
-						type="button"
-						size="icon"
-						variant="outline"
+						appearance="secondary"
+						icon={<ChevronLeft24Regular />}
 						aria-label="Previous month"
 						onClick={() => go(-1)}
-					>
-						<ChevronLeft />
-					</Button>
-					<p className="min-w-44 text-center text-sm font-semibold text-[var(--brand-ink)]">
+					/>
+					<p className={styles.monthTitle}>
 						{monthTitle(cursor.year, cursor.month)}
 					</p>
 					<Button
-						type="button"
-						size="icon"
-						variant="outline"
+						appearance="secondary"
+						icon={<ChevronRight24Regular />}
 						aria-label="Next month"
 						onClick={() => go(1)}
-					>
-						<ChevronRight />
-					</Button>
+					/>
 				</div>
-				<div
-					role="group"
-					aria-label="Milestone type"
-					className="ml-auto flex flex-wrap items-center gap-2"
-				>
+				<div role="group" aria-label="Milestone type" className={styles.filters}>
 					{MILESTONE_ORDER.map((type) => {
 						const on = shown[type];
+						const badge = MILESTONE_BADGE[type];
 						return (
 							<button
 								key={type}
 								type="button"
 								aria-pressed={on}
 								onClick={() => toggleType(type)}
-								className={cn(
-									"inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors",
+								className={styles.filter}
+								style={
 									on
-										? `${MILESTONE_BADGE[type].className} border-transparent`
-										: "border-[var(--line)] bg-card text-[var(--sea-ink-soft)] hover:border-[var(--brand-indigo)]/40",
-								)}
+										? {
+												background: badge.background,
+												color: badge.color,
+												borderColor: "transparent",
+											}
+										: undefined
+								}
 							>
 								<span
-									className={cn(
-										"size-2 rounded-full",
-										on ? "bg-white/90" : MILESTONE_BADGE[type].className,
-									)}
+									className={styles.dot}
+									style={{
+										background: on ? "rgba(255,255,255,0.9)" : badge.background,
+									}}
 									aria-hidden="true"
 								/>
-								{MILESTONE_BADGE[type].label}
+								{badge.label}
 							</button>
 						);
 					})}
 				</div>
 			</div>
-			<div className="min-h-0 flex-[1.3] overflow-auto p-3">
-				<div className="grid h-full min-h-[28rem] grid-cols-7 grid-rows-[auto_repeat(6,minmax(0,1fr))] gap-1">
+			<div className={styles.gridWrap}>
+				<div className={styles.grid}>
 					{WEEKDAYS.map((day) => (
-						<p
-							key={day}
-							className="px-1 pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-indigo-light)]"
-						>
+						<p key={day} className={styles.weekday}>
 							{day}
 						</p>
 					))}
@@ -195,38 +327,37 @@ export function UpcomingCalendar({
 								aria-pressed={selected}
 								aria-label={label}
 								onClick={() => selectDay(cell.iso, cell.inMonth)}
-								className={cn(
-									"flex min-h-0 flex-col gap-1 rounded-lg border p-1.5 text-left transition-colors",
-									cell.inMonth
-										? "bg-card"
-										: "bg-[var(--brand-tint-25)] text-[var(--sea-ink-soft)]",
-									selected
-										? "border-[var(--brand-orange)] bg-accent dark:bg-[color-mix(in_srgb,var(--brand-orange)_32%,transparent)]"
-										: "border-transparent hover:border-[var(--line)]",
-									isToday && !selected ? "border-[var(--brand-indigo)]" : null,
-								)}
+								className={styles.day}
+								style={{
+									opacity: cell.inMonth ? 1 : 0.55,
+									borderColor: selected
+										? "#f15d2a"
+										: isToday
+											? "#24338a"
+											: "transparent",
+									background: selected
+										? theme.isDark
+											? "color-mix(in srgb, #f15d2a 32%, transparent)"
+											: "#fff1eb"
+										: undefined,
+									color:
+										selected && theme.isDark
+											? "#ffffff"
+											: undefined,
+								}}
 							>
-								<span
-									className={cn(
-										"text-xs font-semibold",
-										selected ? "dark:text-white" : null,
-										isToday && !selected
-											? "text-[var(--brand-indigo)] dark:text-[var(--brand-indigo-light)]"
-											: null,
-									)}
-								>
-									{cell.day}
-								</span>
+								<span className={styles.dayNumber}>{cell.day}</span>
 								{types.length > 0 ? (
-									<span className="mt-auto flex flex-wrap gap-0.5">
+									<span className={styles.badges}>
 										{types.map((type) => (
 											<span
 												key={type}
 												title={`${counts[type]} ${MILESTONE_BADGE[type].label}`}
-												className={cn(
-													"inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums leading-4",
-													MILESTONE_BADGE[type].className,
-												)}
+												className={styles.count}
+												style={{
+													background: MILESTONE_BADGE[type].background,
+													color: MILESTONE_BADGE[type].color,
+												}}
 											>
 												{counts[type]}
 											</span>
@@ -238,19 +369,17 @@ export function UpcomingCalendar({
 					})}
 				</div>
 			</div>
-			<div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[var(--line)]">
-				<div className="flex shrink-0 items-center gap-2 px-4 py-2 text-sm">
-					<CalendarDays className="size-4 text-[var(--brand-indigo)]" />
-					<p className="font-semibold text-[var(--brand-ink)]">
-						{formatDate(selectedIso)}
-					</p>
-					<p className="text-[var(--sea-ink-soft)]">
+			<div className={styles.detail}>
+				<div className={styles.detailHead}>
+					<CalendarLtr24Regular />
+					<p style={{ margin: 0, fontWeight: 600 }}>{formatDate(selectedIso)}</p>
+					<p style={{ margin: 0, color: tokens.colorNeutralForeground3 }}>
 						{selectedSends.length === 0
 							? "No notes on this day"
 							: `${selectedSends.length} note${selectedSends.length === 1 ? "" : "s"}`}
 					</p>
 				</div>
-				<div className="min-h-0 flex-1 overflow-auto">
+				<div className={styles.detailScroll}>
 					{children(selectedSends, selectedIso)}
 				</div>
 			</div>

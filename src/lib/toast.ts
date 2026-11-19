@@ -1,11 +1,11 @@
-import { toast as sonnerToast } from "sonner";
+import toast from "react-hot-toast";
 
 export function toastAction(message: string) {
-	sonnerToast.success(message);
+	toast.success(message);
 }
 
 export function toastError(message: string) {
-	sonnerToast.error(message);
+	toast.error(message);
 }
 
 export function actionErrorMessage(error: unknown, fallback: string) {

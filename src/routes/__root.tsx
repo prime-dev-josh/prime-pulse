@@ -6,9 +6,8 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { ThemeProvider } from "#/components/theme-provider";
-import { Toaster } from "#/components/ui/sonner";
-import { THEME_BOOTSTRAP } from "#/lib/theme";
+import { Toaster } from "react-hot-toast";
+import { PrimeThemeProvider } from "#/theme/PrimeThemeProvider";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
@@ -57,13 +56,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
-				<script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
 				<HeadContent />
 			</head>
 			<body>
-				<ThemeProvider>
+				<PrimeThemeProvider>
 					{children}
-					<Toaster />
+					<Toaster position="bottom-center" />
 					<TanStackDevtools
 						config={{
 							position: "bottom-right",
@@ -76,7 +74,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 							TanStackQueryDevtools,
 						]}
 					/>
-				</ThemeProvider>
+				</PrimeThemeProvider>
 				<Scripts />
 			</body>
 		</html>

@@ -183,14 +183,14 @@ export function EmailPdfViewer({ send }: { send: UpcomingSend }) {
 
 	if (error) {
 		return (
-			<p className="p-6 text-sm text-destructive" role="alert">
+			<p style={{ margin: 0, padding: 24, fontSize: 14, color: "#b42318" }} role="alert">
 				{error}
 			</p>
 		);
 	}
 	if (!url) {
 		return (
-			<p className="p-6 text-sm text-[var(--sea-ink-soft)]">
+			<p style={{ margin: 0, padding: 24, fontSize: 14, color: "#5462ad" }}>
 				Preparing preview…
 			</p>
 		);
@@ -199,7 +199,7 @@ export function EmailPdfViewer({ send }: { send: UpcomingSend }) {
 		<iframe
 			title="Email preview"
 			src={url}
-			className="h-full w-full border-0 bg-white"
+			style={{ height: "100%", width: "100%", border: 0, background: "#ffffff" }}
 		/>
 	);
 }
