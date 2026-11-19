@@ -7,6 +7,7 @@ import {
 	type CSSProperties,
 	type ReactNode,
 } from "react";
+import { revealApp } from "#/theme/PrimeSplash";
 import { ThemeContext } from "#/theme/themeContext";
 import {
 	findTheme,
@@ -22,6 +23,7 @@ import {
  */
 export function PrimeThemeProvider({ children }: { children: ReactNode }) {
 	const [theme, setThemeState] = useState<PrimeTheme>(PRIME_LIGHT);
+	const [hydrated, setHydrated] = useState(false);
 
 	const setTheme = useCallback((next: PrimeTheme) => {
 		setThemeState(next);
@@ -34,18 +36,24 @@ export function PrimeThemeProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		setThemeState(storedTheme() ?? systemTheme());
+		setHydrated(true);
+		const fallback = window.setTimeout(revealApp, 2000);
+		return () => window.clearTimeout(fallback);
 	}, []);
 
 	useEffect(() => {
 		document.body.dataset.primeTheme = theme.id;
 		document.documentElement.style.colorScheme = theme.isDark ? "dark" : "light";
 		document.body.style.background = theme.shell["--prime-page-bg"];
-		return () => {
-			delete document.body.dataset.primeTheme;
-			document.documentElement.style.colorScheme = "";
-			document.body.style.background = "";
-		};
 	}, [theme]);
+
+	useEffect(() => {
+		if (!hydrated) return;
+		const frame = requestAnimationFrame(() => {
+			requestAnimationFrame(revealApp);
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [hydrated]);
 
 	const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme]);
 

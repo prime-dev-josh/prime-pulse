@@ -37,14 +37,39 @@ const useStyles = makeStyles({
 		minWidth: 0,
 	},
 	logo: {
-		height: "28px",
+		display: "block",
+		height: "32px",
 		width: "auto",
 	},
-	wordmark: {
+	rule: {
+		width: "1px",
+		alignSelf: "stretch",
+		margin: "4px 0",
+		backgroundColor: "rgba(255, 255, 255, 0.45)",
+	},
+	product: {
 		margin: 0,
-		fontSize: tokens.fontSizeBase300,
-		fontWeight: tokens.fontWeightBold,
-		letterSpacing: "0.04em",
+		fontWeight: tokens.fontWeightRegular,
+		fontSize: tokens.fontSizeBase400,
+		lineHeight: tokens.lineHeightBase400,
+		color: "var(--prime-header-fg)",
+	},
+	actions: {
+		display: "flex",
+		flexWrap: "wrap",
+		alignItems: "center",
+		gap: "4px",
+		"& .fui-Button": {
+			color: "var(--prime-header-fg)",
+			"--colorNeutralForeground2": "var(--prime-header-fg)",
+			"--colorNeutralForeground2Hover": "var(--prime-header-fg)",
+			"--colorNeutralForeground2Pressed": "var(--prime-header-fg)",
+			"--colorSubtleBackgroundHover": "var(--prime-header-hover)",
+			"--colorTransparentBackgroundHover": "var(--prime-header-hover)",
+			"--colorSubtleBackgroundPressed": "var(--prime-header-pressed)",
+			"--colorTransparentBackgroundPressed": "var(--prime-header-pressed)",
+			"--colorStrokeFocus2": "var(--prime-header-fg)",
+		},
 	},
 	nav: {
 		display: "flex",
@@ -71,6 +96,9 @@ const useStyles = makeStyles({
 		color: "var(--prime-cta-fg)",
 		backgroundColor: "var(--prime-cta-bg)",
 		textDecoration: "none",
+		":hover": {
+			backgroundColor: "var(--prime-cta-bg-hover)",
+		},
 	},
 	body: {
 		display: "flex",
@@ -113,10 +141,17 @@ export function AppShell({
 		<div className={styles.shell}>
 			<header className={styles.header}>
 				<div className={styles.brand}>
-					<img src="/prime-ae-logo-white.png" alt="PRIME AE" className={styles.logo} />
-					<p className={styles.wordmark}>Prime Pulse</p>
+					<img
+						src="/prime-ae-logo-white.png"
+						alt="PRIME AE"
+						width={96}
+						height={32}
+						className={styles.logo}
+					/>
+					<span className={styles.rule} aria-hidden />
+					<p className={styles.product}>Prime Pulse</p>
 				</div>
-				<div className={styles.nav}>
+				<div className={styles.actions}>
 					<nav aria-label="Prime Pulse" className={styles.nav}>
 						{links.map((link) => (
 							<Link

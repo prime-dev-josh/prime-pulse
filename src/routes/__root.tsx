@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Toaster } from "react-hot-toast";
+import { PrimeSplash, SPLASH_CSS } from "#/theme/PrimeSplash";
 import { PrimeThemeProvider } from "#/theme/PrimeThemeProvider";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
@@ -57,8 +58,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 		<html lang="en" suppressHydrationWarning>
 			<head>
 				<HeadContent />
+				<style dangerouslySetInnerHTML={{ __html: SPLASH_CSS }} />
 			</head>
 			<body>
+				<PrimeSplash />
 				<PrimeThemeProvider>
 					{children}
 					<Toaster position="bottom-center" />

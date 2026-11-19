@@ -7,6 +7,13 @@ body,
 
 body {
 	overflow: hidden;
+	background: #231b4b;
+}
+
+img[alt="PRIME AE"] {
+	height: 32px;
+	width: auto;
+	display: block;
 }
 
 .sr-only {
