@@ -34,7 +34,7 @@ html[data-prime-ready] #prime-splash {
   display: none;
 }
 img[alt="PRIME AE"] {
-  height: 32px;
+  height: 28px;
   width: auto;
   display: block;
 }

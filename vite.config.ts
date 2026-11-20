@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -30,6 +31,7 @@ const config = defineConfig({
 				external: [/^@sentry\//, "mssql", "tedious", "@azure/identity"],
 			},
 		}),
+		tailwindcss(),
 		tanstackStart(),
 		viteReact(),
 	],

@@ -43,6 +43,8 @@ export function PrimeThemeProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		document.body.dataset.primeTheme = theme.id;
+		document.documentElement.dataset.primeTheme = theme.id;
+		document.documentElement.classList.toggle("dark", theme.isDark);
 		document.documentElement.style.colorScheme = theme.isDark ? "dark" : "light";
 		document.body.style.background = theme.shell["--prime-page-bg"];
 	}, [theme]);

@@ -1,24 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	Badge,
-	Button,
-	Dropdown,
-	Input,
-	makeStyles,
-	Option,
-	tokens,
-} from "@fluentui/react-components";
-import {
-	CalendarLtr24Regular,
-	TextBulletListLtr24Regular,
-} from "@fluentui/react-icons";
+import { CalendarDays, List } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "#/components/app-shell";
 import { EmailPreviewDialog } from "#/components/email-preview-dialog";
+import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
+import { Input } from "#/components/ui/input";
 import { UpcomingCalendar } from "#/components/upcoming-calendar";
 import { formatDate, formatSendAt } from "#/lib/dates";
 import { todayIso } from "#/lib/schedule";
-import { actionErrorMessage, toastAction, toastError } from "#/lib/toast";
 import type {
 	SkippedNote,
 	TemplateKind,
@@ -26,6 +16,8 @@ import type {
 	UpcomingSend,
 } from "#/lib/types";
 import { isCeoKind, TEMPLATE_KIND_COPY } from "#/lib/types";
+import { actionErrorMessage, toastAction, toastError } from "#/lib/toast";
+import { cn } from "#/lib/utils";
 import { getUpcoming, skipPerson, undoSkip } from "#/server/functions";
 
 const filters: Array<{
@@ -37,72 +29,6 @@ const filters: Array<{
 	{ id: "manager_monthly", label: "Manager" },
 	{ id: "ceo", label: "CEO" },
 ];
-
-const useStyles = makeStyles({
-	panel: {
-		display: "flex",
-		flex: 1,
-		flexDirection: "column",
-		minHeight: 0,
-		overflow: "hidden",
-		border: `1px solid ${tokens.colorNeutralStroke2}`,
-		borderRadius: tokens.borderRadiusXLarge,
-		backgroundColor: tokens.colorNeutralBackground1,
-	},
-	toolbar: {
-		display: "flex",
-		flexWrap: "wrap",
-		alignItems: "center",
-		gap: "12px",
-		padding: "16px",
-		borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-	},
-	search: {
-		flex: 1,
-		minWidth: "16rem",
-	},
-	scroll: {
-		flex: 1,
-		minHeight: 0,
-		overflow: "auto",
-	},
-	table: {
-		width: "100%",
-		borderCollapse: "collapse",
-		fontSize: tokens.fontSizeBase300,
-	},
-	head: {
-		position: "sticky",
-		top: 0,
-		backgroundColor: tokens.colorNeutralBackground2,
-		textAlign: "left",
-	},
-	cell: {
-		padding: "12px",
-		borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
-		verticalAlign: "top",
-	},
-	actions: {
-		display: "flex",
-		flexWrap: "wrap",
-		justifyContent: "flex-end",
-		gap: "8px",
-	},
-	people: {
-		marginTop: "12px",
-		padding: 0,
-		listStyle: "none",
-		color: tokens.colorNeutralForeground3,
-		fontSize: tokens.fontSizeBase200,
-	},
-	muted: {
-		color: tokens.colorNeutralForeground3,
-	},
-	message: {
-		padding: "24px",
-		color: tokens.colorNeutralForeground3,
-	},
-});
 
 function csvCell(value: string) {
 	if (/[",\r\n]/.test(value)) return `"${value.replaceAll('"', '""')}"`;
@@ -151,7 +77,6 @@ function matchesKind(
 }
 
 export function UpcomingScreen({ initialDate }: { initialDate?: string }) {
-	const styles = useStyles();
 	const queryClient = useQueryClient();
 	const upcoming = useQuery({
 		queryKey: ["upcoming"],
@@ -261,56 +186,73 @@ export function UpcomingScreen({ initialDate }: { initialDate?: string }) {
 		upcoming.data?.sends.length === 0 && upcoming.data.skipped.length === 0
 			? "No upcoming notes. Create and turn on a template first."
 			: "No upcoming notes match this view.";
-	const selectedKind = filters.find((filter) => filter.id === kind) ?? filters[0];
 
 	return (
 		<AppShell
 			heading="Upcoming"
 			title="Who would get a note from the templates that are turned on. Nothing is sent from this screen."
 		>
-			<section className={styles.panel}>
-				<div className={styles.toolbar}>
+			<section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-card shadow-sm">
+				<div className="flex shrink-0 flex-col gap-3 border-b border-[var(--line)] p-4 sm:flex-row sm:items-center">
 					<Input
-						className={styles.search}
 						value={search}
-						onChange={(_, data) => setSearch(data.value)}
+						onChange={(event) => setSearch(event.target.value)}
 						placeholder="Search person, manager, or template"
 						aria-label="Search upcoming sends"
+						className="bg-card"
 					/>
-					<Dropdown
+					<select
+						value={kind}
+						onChange={(event) =>
+							setKind(event.target.value as (typeof filters)[number]["id"])
+						}
 						aria-label="Filter by template kind"
-						value={selectedKind.label}
-						selectedOptions={[kind]}
-						onOptionSelect={(_, data) => {
-							if (data.optionValue) {
-								setKind(data.optionValue as (typeof filters)[number]["id"]);
-							}
-						}}
+						className="h-9 w-full shrink-0 rounded-md border border-input bg-card px-3 text-sm text-foreground sm:w-44"
 					>
 						{filters.map((filter) => (
-							<Option key={filter.id} value={filter.id}>
+							<option key={filter.id} value={filter.id}>
 								{filter.label}
-							</Option>
+							</option>
 						))}
-					</Dropdown>
-					<Button
-						appearance={view === "list" ? "primary" : "secondary"}
-						icon={<TextBulletListLtr24Regular />}
-						aria-pressed={view === "list"}
-						onClick={() => setView("list")}
+					</select>
+					<div
+						role="group"
+						aria-label="Upcoming view"
+						className="flex shrink-0 rounded-md border border-input p-0.5"
 					>
-						List
-					</Button>
+						<button
+							type="button"
+							aria-pressed={view === "list"}
+							onClick={() => setView("list")}
+							className={cn(
+								"inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm font-medium",
+								view === "list"
+									? "bg-[var(--brand-indigo)] text-white dark:bg-white dark:text-[var(--brand-indigo)]"
+									: "text-[var(--brand-indigo)] hover:bg-[var(--brand-tint-25)] dark:text-white",
+							)}
+						>
+							<List className="size-4" />
+							List
+						</button>
+						<button
+							type="button"
+							aria-pressed={view === "calendar"}
+							onClick={() => setView("calendar")}
+							className={cn(
+								"inline-flex h-8 items-center gap-1.5 rounded px-3 text-sm font-medium",
+								view === "calendar"
+									? "bg-[var(--brand-indigo)] text-white dark:bg-white dark:text-[var(--brand-indigo)]"
+									: "text-[var(--brand-indigo)] hover:bg-[var(--brand-tint-25)] dark:text-white",
+							)}
+						>
+							<CalendarDays className="size-4" />
+							Calendar
+						</button>
+					</div>
 					<Button
-						appearance={view === "calendar" ? "primary" : "secondary"}
-						icon={<CalendarLtr24Regular />}
-						aria-pressed={view === "calendar"}
-						onClick={() => setView("calendar")}
-					>
-						Calendar
-					</Button>
-					<Button
-						appearance="secondary"
+						type="button"
+						variant="outline"
+						className="shrink-0"
 						disabled={!upcoming.data}
 						onClick={() => {
 							downloadCsv(exportRows);
@@ -325,18 +267,18 @@ export function UpcomingScreen({ initialDate }: { initialDate?: string }) {
 					</Button>
 				</div>
 				{upcoming.isPending ? (
-					<p className={styles.message}>
+					<p className="p-6 text-sm text-[var(--sea-ink-soft)]">
 						Building the upcoming list from ADP and your templates…
 					</p>
 				) : null}
 				{upcoming.isError ? (
-					<div className={styles.message}>
-						<p role="alert">
+					<div className="space-y-3 p-6">
+						<p className="text-sm text-destructive" role="alert">
 							{upcoming.error instanceof Error
 								? upcoming.error.message
 								: "Could not load upcoming notes"}
 						</p>
-						<Button appearance="secondary" onClick={() => upcoming.refetch()}>
+						<Button variant="outline" onClick={() => upcoming.refetch()}>
 							Try again
 						</Button>
 					</div>
@@ -408,72 +350,84 @@ function SendTable({
 	onUndo: (note: SkippedNote) => void;
 	busy: boolean;
 }) {
-	const styles = useStyles();
 	return (
-		<div className={styles.scroll}>
-			<table className={styles.table}>
+		<div className="min-h-0 flex-1 overflow-auto">
+			<table className="w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm">
 				<caption className="sr-only">Upcoming template sends</caption>
-				<thead className={styles.head}>
+				<thead className="bg-[var(--brand-tint-25)] text-xs uppercase tracking-wide text-[var(--brand-indigo-light)]">
 					<tr>
-						<th className={styles.cell}>Send date</th>
-						<th className={styles.cell}>Template</th>
-						<th className={styles.cell}>To</th>
-						<th className={styles.cell}>About</th>
-						<th className={styles.cell}> </th>
+						<th className="sticky top-0 z-[2] bg-[var(--brand-tint-25)] px-4 py-3 font-semibold">
+							Send date
+						</th>
+						<th className="sticky top-0 z-[2] bg-[var(--brand-tint-25)] px-3 py-3 font-semibold">
+							Template
+						</th>
+						<th className="sticky top-0 z-[2] bg-[var(--brand-tint-25)] px-3 py-3 font-semibold">
+							To
+						</th>
+						<th className="sticky top-0 z-[2] bg-[var(--brand-tint-25)] px-3 py-3 font-semibold">
+							About
+						</th>
+						<th className="sticky top-0 z-[2] bg-[var(--brand-tint-25)] px-4 py-3 font-semibold">
+							{" "}
+						</th>
 					</tr>
 				</thead>
 				<tbody>
 					{rows.length === 0 && skipped.length === 0 ? (
 						<tr>
-							<td className={styles.cell} colSpan={5}>
+							<td colSpan={5} className="px-4 py-8 text-[var(--sea-ink-soft)]">
 								{empty}
 							</td>
 						</tr>
 					) : (
 						rows.map((send) => (
-							<tr key={send.id}>
-								<td className={styles.cell}>
+							<tr
+								key={send.id}
+								className="border-t border-[var(--line)] align-top"
+							>
+								<td className="px-4 py-3 font-semibold">
 									<div>{formatDate(send.sendDate)}</div>
-									<div className={styles.muted}>
+									<div className="text-xs font-normal text-[var(--sea-ink-soft)]">
 										{formatSendAt(send.sendAt)} ET
 									</div>
 								</td>
-								<td className={styles.cell}>
+								<td className="px-3 py-3">
 									<div>{send.templateName}</div>
-									<Badge appearance="tint">{TEMPLATE_KIND_COPY[send.kind].label}</Badge>
+									<Badge variant="secondary" className="mt-1">
+										{TEMPLATE_KIND_COPY[send.kind].label}
+									</Badge>
 								</td>
-								<td className={styles.cell}>
+								<td className="px-3 py-3">
 									<div>{send.recipientName}</div>
-									<div className={styles.muted}>
+									<div className="text-xs text-[var(--sea-ink-soft)]">
 										{send.recipientEmails.length
 											? send.recipientEmails.join(", ")
 											: "No email on file"}
 									</div>
 								</td>
-								<td className={styles.cell}>
+								<td className="px-3 py-3">
 									<div>{send.summary}</div>
-									<div className={styles.muted}>{send.subjectPreview}</div>
+									<div className="text-xs text-[var(--sea-ink-soft)]">
+										{send.subjectPreview}
+									</div>
 								</td>
-								<td className={styles.cell}>
-									<div className={styles.actions}>
+								<td className="px-4 py-3">
+									<div className="flex flex-wrap justify-end gap-2">
 										<Button
-											size="small"
-											appearance="secondary"
+											size="sm"
+											variant="outline"
 											onClick={() => onTogglePeople(send.id)}
 										>
 											{openId === send.id ? "Hide" : "People"}
 										</Button>
-										<Button
-											size="small"
-											appearance="primary"
-											onClick={() => onPreview(send)}
-										>
+										<Button size="sm" onClick={() => onPreview(send)}>
 											Preview
 										</Button>
 										{send.employees.length === 1 ? (
 											<Button
-												size="small"
-												appearance="secondary"
+												size="sm"
+												variant="outline"
 												disabled={busy}
 												onClick={() => onSkip(send, send.employees[0])}
 											>
@@ -482,15 +436,22 @@ function SendTable({
 										) : null}
 									</div>
 									{openId === send.id ? (
-										<ul className={styles.people}>
+										<ul className="mt-3 space-y-2 text-xs text-[var(--sea-ink-soft)]">
 											{send.employees.map((person) => (
-												<li key={`${person.associateOID}-${person.milestoneType}`}>
-													{person.displayName} · {person.milestoneType}
-													{person.years != null ? ` · ${person.years} yr` : ""}
+												<li
+													key={`${person.associateOID}-${person.milestoneType}`}
+													className="flex items-center justify-end gap-2"
+												>
+													<span>
+														{person.displayName} · {person.milestoneType}
+														{person.years != null
+															? ` · ${person.years} yr`
+															: ""}
+													</span>
 													{send.employees.length > 1 ? (
 														<Button
-															size="small"
-															appearance="secondary"
+															size="sm"
+															variant="outline"
 															disabled={busy}
 															onClick={() => onSkip(send, person)}
 														>
@@ -508,21 +469,21 @@ function SendTable({
 					{skipped.map((note) => (
 						<tr
 							key={`skip-${note.templateId}-${note.associateOID}-${note.milestoneType}-${note.milestoneDate}`}
-							className={styles.muted}
+							className="border-t border-[var(--line)] align-top text-[var(--sea-ink-soft)]"
 						>
-							<td className={styles.cell}>
+							<td className="px-4 py-3">
 								<div>{formatDate(note.sendDate)}</div>
-								<div>{formatSendAt(note.sendAt)} ET</div>
+								<div className="text-xs">{formatSendAt(note.sendAt)} ET</div>
 							</td>
-							<td className={styles.cell}>{note.templateName}</td>
-							<td className={styles.cell}>Skipped</td>
-							<td className={styles.cell}>
+							<td className="px-3 py-3">{note.templateName}</td>
+							<td className="px-3 py-3">Skipped</td>
+							<td className="px-3 py-3">
 								{note.displayName} · {note.milestoneType}
 							</td>
-							<td className={styles.cell}>
+							<td className="px-4 py-3 text-right">
 								<Button
-									size="small"
-									appearance="secondary"
+									size="sm"
+									variant="outline"
 									disabled={busy}
 									onClick={() => onUndo(note)}
 								>

@@ -6,9 +6,9 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { Toaster } from "react-hot-toast";
 import { PrimeSplash, SPLASH_CSS } from "#/theme/PrimeSplash";
 import { PrimeThemeProvider } from "#/theme/PrimeThemeProvider";
+import { Toaster } from "#/components/ui/sonner";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
@@ -64,7 +64,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<PrimeSplash />
 				<PrimeThemeProvider>
 					{children}
-					<Toaster position="bottom-center" />
+					<Toaster />
 					<TanStackDevtools
 						config={{
 							position: "bottom-right",

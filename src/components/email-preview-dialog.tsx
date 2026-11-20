@@ -1,39 +1,15 @@
+import { useEffect, useState } from "react";
+import type { ComponentType } from "react";
 import {
 	Dialog,
-	DialogBody,
 	DialogContent,
-	DialogSurface,
+	DialogDescription,
+	DialogHeader,
 	DialogTitle,
-	makeStyles,
-	tokens,
-} from "@fluentui/react-components";
-import { useEffect, useState, type ComponentType } from "react";
+} from "#/components/ui/dialog";
 import type { UpcomingSend } from "#/lib/types";
 
 type ViewerProps = { send: UpcomingSend };
-
-const useStyles = makeStyles({
-	surface: {
-		width: "min(56rem, calc(100vw - 2rem))",
-		maxWidth: "56rem",
-		height: "min(52rem, calc(100vh - 3rem))",
-	},
-	body: {
-		display: "grid",
-		gridTemplateRows: "auto minmax(0, 1fr)",
-		height: "100%",
-		gap: 0,
-	},
-	frame: {
-		minHeight: 0,
-		overflow: "hidden",
-		backgroundColor: "#ffffff",
-	},
-	note: {
-		padding: "24px",
-		color: tokens.colorNeutralForeground3,
-	},
-});
 
 export function EmailPreviewDialog({
 	send,
@@ -42,8 +18,9 @@ export function EmailPreviewDialog({
 	send: UpcomingSend | null;
 	onOpenChange: (open: boolean) => void;
 }) {
-	const styles = useStyles();
-	const [Viewer, setViewer] = useState<ComponentType<ViewerProps> | null>(null);
+	const [Viewer, setViewer] = useState<ComponentType<ViewerProps> | null>(
+		null,
+	);
 	const [loadError, setLoadError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -62,33 +39,30 @@ export function EmailPreviewDialog({
 	}, [send, Viewer]);
 
 	return (
-		<Dialog
-			open={send != null}
-			onOpenChange={(_, data) => onOpenChange(data.open)}
-		>
-			<DialogSurface className={styles.surface}>
-				<DialogBody className={styles.body}>
-					<DialogTitle>
-						Email preview
-						<div style={{ fontWeight: 400, fontSize: "14px" }}>
-							{send
-								? `${send.templateName} · ${send.recipientName}`
-								: "How this note would look."}
-						</div>
-					</DialogTitle>
-					<DialogContent className={styles.frame}>
-						{loadError ? (
-							<p className={styles.note} role="alert">
-								{loadError}
-							</p>
-						) : send && Viewer ? (
-							<Viewer send={send} />
-						) : (
-							<p className={styles.note}>Preparing preview…</p>
-						)}
-					</DialogContent>
-				</DialogBody>
-			</DialogSurface>
+		<Dialog open={send != null} onOpenChange={onOpenChange}>
+			<DialogContent className="grid h-[min(52rem,calc(100vh-3rem))] w-[min(56rem,calc(100vw-2rem))] max-w-4xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden border-[var(--line)] bg-card p-0 sm:max-w-4xl sm:rounded-xl">
+				<DialogHeader className="shrink-0 space-y-1 border-b border-[var(--line)] px-6 py-4 pr-12 text-left">
+					<DialogTitle>Email preview</DialogTitle>
+					<DialogDescription>
+						{send
+							? `${send.templateName} · ${send.recipientName}`
+							: "How this note would look."}
+					</DialogDescription>
+				</DialogHeader>
+				<div className="min-h-0 flex-1 bg-white">
+					{loadError ? (
+						<p className="p-6 text-sm text-destructive" role="alert">
+							{loadError}
+						</p>
+					) : send && Viewer ? (
+						<Viewer send={send} />
+					) : (
+						<p className="p-6 text-sm text-[var(--sea-ink-soft)]">
+							Preparing preview…
+						</p>
+					)}
+				</div>
+			</DialogContent>
 		</Dialog>
 	);
 }

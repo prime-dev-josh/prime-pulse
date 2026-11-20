@@ -128,16 +128,14 @@ export const MILESTONE_ORDER: MilestoneType[] = ["birthday", "anniversary"];
 
 export const MILESTONE_BADGE: Record<
 	MilestoneType,
-	{ label: string; background: string; color: string }
+	{ label: string; className: string }
 > = {
 	birthday: {
 		label: "Birthday",
-		background: "#f15d2a",
-		color: "#ffffff",
+		className: "bg-[var(--brand-orange)] text-white",
 	},
 	anniversary: {
 		label: "Anniversary",
-		background: "#24338a",
-		color: "#ffffff",
+		className: "bg-[var(--brand-indigo)] text-white",
 	},
 };
